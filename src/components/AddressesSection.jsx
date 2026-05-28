@@ -1,137 +1,545 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Plus, X, Trash2, Edit3, Check } from 'lucide-react';
+import { MapPin, Edit3, Plus, X, Check, Trash2, Loader2 } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
+import axios from 'axios'
 
-const dummyAddresses = [
-  { id: 1, type: 'Home', address: '123 Park Avenue, Apt 4B', city: 'New York', state: 'NY', zip: '10022', country: 'United States', isDefault: true },
-  { id: 2, type: 'Office', address: '456 Madison Avenue, Floor 12', city: 'New York', state: 'NY', zip: '10022', country: 'United States', isDefault: false }
-];
+const API_BASE_URL = 'http://172.20.10.3:5000/api/users';
 
 const AddressesSection = () => {
-  const [addresses, setAddresses] = useState(dummyAddresses);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [addresses, setAddresses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showAddAddress, setShowAddAddress] = useState(false);
+  const [newAddress, setNewAddress] = useState('');
   const [editingId, setEditingId] = useState(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
-  const [newAddress, setNewAddress] = useState({ type: 'Home', address: '', city: '', state: '', zip: '', country: '', isDefault: false });
+  const [editAddressText, setEditAddressText] = useState('');
 
-  const handleSetDefault = (id) => {
-    setAddresses(addresses.map(addr => ({ ...addr, isDefault: addr.id === id })));
+  // Fetch addresses on component mount
+  useEffect(() => {
+    fetchAddresses();
+  }, []);
+
+  const fetchAddresses = async () => {
+    try {
+      setIsLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.log("No session found");
+        setIsLoading(false);
+        return;
+      }
+
+      const token = session.access_token;
+      
+      const response = await axios.get(
+        `${API_BASE_URL}/get-user-addresses`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          }
+        }
+      );
+
+      // console.log("Fetched addresses:", response.data.addresses);
+      
+      if (response.data.addresses && Array.isArray(response.data.addresses)) {
+        const formattedAddresses = response.data.addresses.map(addr => ({
+          id: addr.id,
+          full_address: addr.address,
+          is_default: addr.is_default
+        }));
+        
+        setAddresses(formattedAddresses);
+      } else {
+        setAddresses([]);
+      }
+    } catch (error) {
+      console.error('Error fetching addresses:', error);
+      alert('Failed to load addresses. Please try again.');
+      setAddresses([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDelete = (id) => {
-    setAddresses(addresses.filter(addr => addr.id !== id));
-    setShowDeleteConfirm(null);
+  const handleAddAddress = async () => {
+    if (!newAddress.trim()) {
+      alert('Please enter an address');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      
+      if (!session) {
+        alert('Please log in to save address');
+        setIsSaving(false);
+        return;
+      }
+
+      const token = session.access_token;
+      
+      const addressData = {
+        address: newAddress.trim(),
+        is_default: addresses.length === 0
+      };
+
+      // console.log('Sending to backend:', addressData);
+
+      const response = await axios.post(
+        `${API_BASE_URL}/add-user-address`,
+        addressData,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.status === 200 || response.status === 201) {
+        // console.log('Address saved successfully:', response.data);
+        
+        const newAddressObj = {
+          id: response.data.profile?.id || Date.now(),
+          full_address: newAddress.trim(),
+          is_default: addressData.is_default
+        };
+        
+        if (addressData.is_default) {
+          setAddresses(prev => [
+            newAddressObj,
+            ...prev.map(addr => ({ ...addr, is_default: false }))
+          ]);
+        } else {
+          setAddresses(prev => [...prev, newAddressObj]);
+        }
+        
+        setNewAddress('');
+        setShowAddAddress(false);
+        
+        alert('Address saved successfully!');
+        
+      } else {
+        throw new Error('Saving address failed');
+      }
+    } catch (error) {
+      console.error('Error saving address:', error);
+      
+      if (error.response?.data?.error) {
+        alert(`Error: ${error.response.data.error}`);
+      } else {
+        alert('Failed to save address. Please try again.');
+      }
+      // Re-fetch to ensure sync with server
+      fetchAddresses();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleAdd = () => {
-    const newId = Math.max(...addresses.map(a => a.id), 0) + 1;
-    setAddresses([...addresses, { ...newAddress, id: newId }]);
-    setShowAddForm(false);
-    setNewAddress({ type: 'Home', address: '', city: '', state: '', zip: '', country: '', isDefault: false });
+  const handleSetDefault = async (id) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('Please log in to update address');
+        return;
+      }
+
+      const token = session.access_token;
+      
+      // Update in database first
+      const response = await axios.patch(
+        `${API_BASE_URL}/update-user-address/${id}`,
+        { is_default: true },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.status === 200) {
+        // console.log('Default address updated successfully:', response.data);
+        
+        // Update state with server response
+        setAddresses(prev => prev.map(addr => ({
+          ...addr,
+          is_default: addr.id === id
+        })));
+        
+      } else {
+        throw new Error('Failed to update default address');
+      }
+    } catch (error) {
+      console.error('Error setting default address:', error);
+      alert(error.response?.data?.error || 'Failed to set default address. Please try again.');
+      // Re-fetch to sync with server
+      fetchAddresses();
+    }
   };
 
-  const handleEdit = (id) => {
+  const handleRemoveAddress = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this address?')) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('Please log in to delete address');
+        setIsDeleting(false);
+        return;
+      }
+
+      const token = session.access_token;
+      
+      // Get the address before deleting to check if it's default
+      const addressToRemove = addresses.find(addr => addr.id === id);
+      
+      // Delete from database
+      const response = await axios.delete(
+        `${API_BASE_URL}/delete-user-address/${id}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          }
+        }
+      );
+
+      if (response.status === 200) {
+        // Address deleted successfully
+        // Remove from state
+        setAddresses(prev => prev.filter(addr => addr.id !== id));
+        
+        // If we removed the default address, show message
+        if (addressToRemove?.is_default) {
+          alert('Default address deleted. You may want to set a new default address.');
+        }
+        
+      } else {
+        throw new Error('Failed to delete address');
+      }
+    } catch (error) {
+      console.error('Error deleting address:', error);
+      alert(error.response?.data?.error || 'Failed to delete address. Please try again.');
+      // Re-fetch to sync with server
+      fetchAddresses();
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleEditAddress = (id) => {
+    const addressToEdit = addresses.find(addr => addr.id === id);
+    if (!addressToEdit) return;
+    
+    console.log('Edit address clicked:', addressToEdit);
     setEditingId(id);
-    const addr = addresses.find(a => a.id === id);
-    setNewAddress(addr);
-    setShowAddForm(true);
+    setEditAddressText(addressToEdit.full_address);
   };
 
-  const handleUpdate = () => {
-    setAddresses(addresses.map(addr => addr.id === editingId ? { ...newAddress, id: editingId } : addr));
-    setShowAddForm(false);
-    setEditingId(null);
-    setNewAddress({ type: 'Home', address: '', city: '', state: '', zip: '', country: '', isDefault: false });
+  const handleSaveEdit = async (id) => {
+    if (!editAddressText.trim()) {
+      alert('Please enter an address');
+      return;
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('Please log in to update address');
+        return;
+      }
+
+      const token = session.access_token;
+      
+      // Update in database
+      const response = await axios.patch(
+        `${API_BASE_URL}/update-user-address/${id}`,
+        { address: editAddressText.trim() },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.status === 200) {
+        // console.log('Address updated successfully:', response.data);
+        
+        // Update state with server response
+        setAddresses(prev => prev.map(addr => 
+          addr.id === id 
+            ? { ...addr, full_address: editAddressText.trim() }
+            : addr
+        ));
+        
+        setEditingId(null);
+        setEditAddressText('');
+        
+        alert('Address updated successfully!');
+        
+      } else {
+        throw new Error('Failed to update address');
+      }
+    } catch (error) {
+      console.error('Error updating address:', error);
+      alert(error.response?.data?.error || 'Failed to update address. Please try again.');
+      // Re-fetch to sync with server
+      fetchAddresses();
+    }
   };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditAddressText('');
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex flex-col items-center justify-center py-20"
+      >
+        <Loader2 className="w-12 h-12 animate-spin text-black mb-4" />
+        <h3 className="text-lg font-semibold text-gray-700">Loading addresses...</h3>
+        <p className="text-gray-500 mt-1">Please wait while we fetch your saved addresses</p>
+      </motion.div>
+    );
+  }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-      <div className="flex justify-between items-center mb-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="space-y-8"
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-light tracking-wide" style={{ fontFamily: "'Playfair Display', serif" }}>Saved Addresses</h2>
-          <p className="text-gray-500 text-sm mt-1">Manage your shipping addresses</p>
+          <h3 className="text-xl font-bold text-gray-900">Saved Addresses</h3>
+          <p className="text-gray-500 mt-1">
+            {addresses.length === 0 
+              ? 'No addresses saved yet' 
+              : `${addresses.length} address${addresses.length !== 1 ? 'es' : ''} saved`}
+          </p>
         </div>
-        <button onClick={() => { setEditingId(null); setNewAddress({ type: 'Home', address: '', city: '', state: '', zip: '', country: '', isDefault: false }); setShowAddForm(true); }} className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 text-sm">
-          <Plus className="w-4 h-4" />
-          Add Address
+        <button 
+          onClick={() => setShowAddAddress(true)}
+          disabled={isSaving}
+          className="inline-flex items-center gap-2 px-5 py-3.5 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Plus className="w-5 h-5" />
+          Add New Address
         </button>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4">
+      {/* Add Address Form */}
+      {showAddAddress && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-2xl border-2 border-gray-900 shadow-lg p-6"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h4 className="font-bold text-gray-900 text-lg">Enter New Address</h4>
+            <button 
+              onClick={() => {
+                setShowAddAddress(false);
+                setNewAddress('');
+              }}
+              disabled={isSaving}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-gray-700 mb-3">
+              Full Address *
+            </label>
+            <textarea
+              value={newAddress}
+              onChange={(e) => setNewAddress(e.target.value)}
+              placeholder="Enter your complete address (street, city, state, zip code, country)"
+              disabled={isSaving}
+              className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent h-40 resize-none text-lg disabled:opacity-50 disabled:bg-gray-50"
+              rows={5}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button 
+              onClick={() => {
+                setShowAddAddress(false);
+                setNewAddress('');
+              }}
+              disabled={isSaving}
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleAddAddress}
+              disabled={isSaving || !newAddress.trim()}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px] justify-center"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Check className="w-5 h-5" />
+                  Save Address
+                </>
+              )}
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Address Cards */}
+      <div className="grid md:grid-cols-2 gap-6">
         {addresses.map((address) => (
-          <div key={address.id} className="bg-white rounded-lg border border-gray-200 p-5 relative">
-            {address.isDefault && (
-              <span className="absolute top-5 right-5 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">Default</span>
-            )}
-            <h3 className="font-medium text-gray-900 mb-3">{address.type}</h3>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              {address.address}<br />
-              {address.city}, {address.state} {address.zip}<br />
-              {address.country}
-            </p>
-            <div className="flex gap-4 mt-4 pt-3 border-t border-gray-100">
-              {!address.isDefault && (
-                <button onClick={() => handleSetDefault(address.id)} className="text-xs text-gray-500 hover:text-black transition-colors">
+          <motion.div
+            key={address.id}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`bg-white rounded-2xl border-2 p-6 hover:shadow-xl transition-all ${
+              address.is_default ? 'border-gray-900 shadow-lg' : 'border-gray-100 hover:border-gray-200'
+            }`}
+          >
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <h4 className="font-bold text-gray-900 text-lg">
+                    Address {addresses.findIndex(a => a.id === address.id) + 1}
+                  </h4>
+                  {address.is_default && (
+                    <span className="px-2.5 py-1 bg-black text-white text-xs font-medium rounded-full">
+                      Default
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                {editingId === address.id ? (
+                  <>
+                    <button 
+                      onClick={() => handleSaveEdit(address.id)}
+                      disabled={isDeleting}
+                      className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg disabled:opacity-50"
+                      title="Save edit"
+                    >
+                      <Check className="w-5 h-5" />
+                    </button>
+                    <button 
+                      onClick={handleCancelEdit}
+                      disabled={isDeleting}
+                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50"
+                      title="Cancel edit"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button 
+                      onClick={() => handleEditAddress(address.id)}
+                      disabled={isDeleting}
+                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50"
+                      title="Edit address"
+                    >
+                      <Edit3 className="w-5 h-5" />
+                    </button>
+                    <button 
+                      onClick={() => handleRemoveAddress(address.id)}
+                      disabled={isDeleting}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50"
+                      title="Delete address"
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-5 h-5" />
+                      )}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-3 text-gray-600 mb-6">
+              {editingId === address.id ? (
+                <textarea
+                  value={editAddressText}
+                  onChange={(e) => setEditAddressText(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent h-32 resize-none"
+                  rows={4}
+                />
+              ) : (
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-lg font-medium text-gray-800 break-words">
+                    {address.full_address}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 pt-6 border-t border-gray-100">
+              {!address.is_default ? (
+                <button 
+                  onClick={() => handleSetDefault(address.id)}
+                  disabled={isDeleting || editingId === address.id}
+                  className="flex-1 py-2.5 text-center border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   Set as Default
                 </button>
+              ) : (
+                <div className="flex-1 py-2.5 text-center text-green-600 font-medium">
+                  ✓ Current Default
+                </div>
               )}
-              <button onClick={() => handleEdit(address.id)} className="text-xs text-gray-500 hover:text-black transition-colors">
-                <Edit3 className="w-3 h-3 inline mr-1" /> Edit
-              </button>
-              <button onClick={() => setShowDeleteConfirm(address.id)} className="text-xs text-red-500 hover:text-red-600 transition-colors">
-                <Trash2 className="w-3 h-3 inline mr-1" /> Delete
-              </button>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
 
-      {/* Add/Edit Modal */}
-      {showAddForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">{editingId ? 'Edit Address' : 'Add New Address'}</h3>
-              <button onClick={() => { setShowAddForm(false); setEditingId(null); }} className="text-gray-400 hover:text-gray-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <input type="text" placeholder="Address Type (Home, Office, etc.)" value={newAddress.type} onChange={(e) => setNewAddress({ ...newAddress, type: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black" />
-              <input type="text" placeholder="Street Address" value={newAddress.address} onChange={(e) => setNewAddress({ ...newAddress, address: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black" />
-              <input type="text" placeholder="City" value={newAddress.city} onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black" />
-              <input type="text" placeholder="State" value={newAddress.state} onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black" />
-              <input type="text" placeholder="ZIP Code" value={newAddress.zip} onChange={(e) => setNewAddress({ ...newAddress, zip: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black" />
-              <input type="text" placeholder="Country" value={newAddress.country} onChange={(e) => setNewAddress({ ...newAddress, country: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black" />
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={editingId ? handleUpdate : handleAdd} className="flex-1 px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800">
-                {editingId ? 'Update Address' : 'Save Address'}
-              </button>
-              <button onClick={() => { setShowAddForm(false); setEditingId(null); }} className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
-            <h3 className="text-lg font-medium mb-2">Delete Address?</h3>
-            <p className="text-sm text-gray-500 mb-4">This action cannot be undone.</p>
-            <div className="flex gap-3">
-              <button onClick={() => handleDelete(showDeleteConfirm)} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
-                Delete
-              </button>
-              <button onClick={() => setShowDeleteConfirm(null)} className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Empty state */}
+      {addresses.length === 0 && !isLoading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-12 bg-white rounded-2xl border border-gray-100"
+        >
+          <MapPin className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h4 className="text-lg font-semibold text-gray-500 mb-2">No addresses saved</h4>
+          <p className="text-gray-400 mb-6">Add your first delivery address to get started</p>
+          <button 
+            onClick={() => setShowAddAddress(true)}
+            disabled={isSaving}
+            className="inline-flex items-center gap-2 px-5 py-3 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors font-medium disabled:opacity-50"
+          >
+            <Plus className="w-5 h-5" />
+            Add Your First Address
+          </button>
+        </motion.div>
       )}
     </motion.div>
   );

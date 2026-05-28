@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, MapPin, Package, LogOut, ChevronRight, ShoppingBag, Heart, Settings, HelpCircle, Award, ShoppingCartIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -11,22 +11,22 @@ import HelpSection from '../components/HelpSection';
 import raijamLogo from '../assets/raijam_logo.png';
 import { supabase } from '../lib/supabaseClient';
 import { avatarUrl } from '../data/avatarUrl';
-
-// Dummy Data
-const dummyProfile = {
-  name: 'James Harrison',
-  email: 'james.harrison@example.com',
-  phone: '+1 (555) 123-4567',
-  avatar: avatarUrl[0].url,
-  memberSince: 'January 2024',
-  totalSpent: 2847.50
-};
+import axios from 'axios';
 
 const AccountPage = () => {
   const [activeTab, setActiveTab] = useState('orders');
+  const [profile, setProfile] = useState(null);
+  const [fetching, setFetching] = useState(true);
   const navigate = useNavigate();
 
-const handleSignOut = async () => {
+  // Format date for member since
+  const formatMemberSince = (dateString) => {
+    if (!dateString) return "January 2024";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
+  const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error('Error signing out:', error.message);
@@ -47,6 +47,60 @@ const handleSignOut = async () => {
     { id: 'help', icon: <HelpCircle className="w-5 h-5" />, label: 'Help' },
   ];
 
+  // =========================
+  // FETCH PROFILE DATA
+  // =========================
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setFetching(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const { data } = await axios.get(
+          "http://172.20.10.3:5000/api/users/get-profile",
+          {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (data && data.success) {
+          const profileData = {
+            name: data.full_name || "User",
+            email: data.email || "",
+            phone: data.phone_number || "",
+            avatar: data.profile_image || avatarUrl[0].url,
+            role: data.role || "customer",
+            created_at: data.created_at,
+            memberSince: formatMemberSince(data.created_at),
+            totalSpent: data.total_spent || 0
+          };
+          setProfile(profileData);
+        }
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+      } finally {
+        setFetching(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  if (fetching) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-3 border-gray-200 border-t-black rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -64,7 +118,6 @@ const handleSignOut = async () => {
               </button>
               <button onClick={handleSignOut} className="flex items-center gap-2 px-2 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors text-sm">
                Sign Out
-               
               </button>
             </div>
           </div>
@@ -77,17 +130,22 @@ const handleSignOut = async () => {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg border border-gray-200 p-6 sticky top-24">
               <div className="text-center mb-6 pb-6 border-b border-gray-100">
-                <img src={dummyProfile.avatar} alt={dummyProfile.name} className="w-20 h-20 rounded-full object-cover mx-auto mb-3 border-2 border-gray-200" />
-                <h3 className="font-semibold text-gray-900">{dummyProfile.name}</h3>
-                <p className="text-xs text-gray-500 mt-1">Member since {dummyProfile.memberSince}</p>
-                <div className="mt-3 inline-flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full">
-                  <Award className="w-3 h-3 text-gray-600" />
-                  <span className="text-xs text-gray-600">${dummyProfile.totalSpent.toLocaleString()} spent</span>
-                </div>
+                <img 
+                  src={profile?.avatar || avatarUrl[0].url} 
+                  alt={profile?.name || "User"} 
+                  className="w-20 h-20 rounded-full object-cover mx-auto mb-3 border-2 border-gray-200" 
+                />
+                <h3 className="font-semibold text-gray-900">{profile?.name || "User"}</h3>
+                <p className="text-xs text-gray-500 mt-1">Member since {profile?.memberSince || "January 2024"}</p>
+                
               </div>
               <nav className="space-y-1">
                 {sidebarItems.map((item) => (
-                  <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center justify-between p-3 rounded-md transition-all text-left ${activeTab === item.id ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
+                  <button 
+                    key={item.id} 
+                    onClick={() => setActiveTab(item.id)} 
+                    className={`w-full flex items-center justify-between p-3 rounded-md transition-all text-left ${activeTab === item.id ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                  >
                     <div className="flex items-center gap-3">
                       {item.icon}
                       <span className="text-sm font-medium">{item.label}</span>
@@ -103,7 +161,7 @@ const handleSignOut = async () => {
           <div className="lg:col-span-3">
             <AnimatePresence mode="wait">
               {activeTab === 'orders' && <OrdersSection />}
-              {activeTab === 'profile' && <ProfileSection />}
+              {activeTab === 'profile' && <ProfileSection profile={profile} setProfile={setProfile} />}
               {activeTab === 'addresses' && <AddressesSection />}
               {activeTab === 'wishlist' && <WishlistSection />}
               {activeTab === 'settings' && <SettingsSection />}
