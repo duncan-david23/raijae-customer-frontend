@@ -4,7 +4,7 @@ import { Package, Truck, CheckCircle, Clock, ChevronRight, MapPin, CreditCard, C
 import axios from 'axios';
 import { supabase } from '../lib/supabaseClient';
 
-const API_BASE_URL = 'http://172.20.10.3:5000/api/users';
+const API_BASE_URL = 'https://raijae-backend.onrender.com/api/users';
 
 const OrdersSection = () => {
   const [expandedOrder, setExpandedOrder] = useState(null);

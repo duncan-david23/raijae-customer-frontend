@@ -114,7 +114,7 @@ export default function Register() {
     const token = session?.access_token;
 
     // Add user profile to your backend with the token in headers
-    const response = await axios.post('http://172.20.10.3:5000/api/users/profile/add-profile', {
+    const response = await axios.post('https://raijae-backend.onrender.com/api/users/profile/add-profile', {
       email: form.email,
       full_name: form.name,
       role: 'customer',

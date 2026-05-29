@@ -58,7 +58,7 @@ const AccountPage = () => {
         if (!session) return;
 
         const { data } = await axios.get(
-          "http://172.20.10.3:5000/api/users/get-profile",
+          "https://raijae-backend.onrender.com/api/users/get-profile",
           {
             headers: {
               Authorization: `Bearer ${session.access_token}`,

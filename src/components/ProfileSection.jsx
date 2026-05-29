@@ -32,7 +32,7 @@ const ProfileSection = () => {
         if (!session) return;
 
         const { data } = await axios.get(
-          "http://172.20.10.3:5000/api/users/get-profile",
+          "https://raijae-backend.onrender.com/api/users/get-profile",
           {
             headers: {
               Authorization: `Bearer ${session.access_token}`,
@@ -89,7 +89,7 @@ const ProfileSection = () => {
       if (!session) return;
 
       const response = await axios.put(
-        "http://172.20.10.3:5000/api/users/profile/update-profile",
+        "https://raijae-backend.onrender.com/api/users/profile/update-profile",
         {
           profile_image: selectedAvatar.url,
         },
@@ -143,7 +143,7 @@ const ProfileSection = () => {
       }
 
       const response = await axios.put(
-        "http://172.20.10.3:5000/api/users/profile/update-profile",
+        "https://raijae-backend.onrender.com/api/users/profile/update-profile",
         payload,
         {
           headers: {

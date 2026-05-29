@@ -9,7 +9,7 @@ import { useCart } from '../context/CartContext'
 import axios from 'axios'
 import { toast } from 'react-toastify'
 
-const API_BASE_URL = 'http://172.20.10.3:5000/api/users'
+const API_BASE_URL = 'https://raijae-backend.onrender.com/api/users'
 
 export default function ProductDetail() {
   const { id } = useParams()

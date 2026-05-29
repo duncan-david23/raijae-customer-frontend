@@ -4,7 +4,7 @@ import { MapPin, Edit3, Plus, X, Check, Trash2, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import axios from 'axios'
 
-const API_BASE_URL = 'http://172.20.10.3:5000/api/users';
+const API_BASE_URL = 'https://raijae-backend.onrender.com/api/users';
 
 const AddressesSection = () => {
   const [addresses, setAddresses] = useState([]);

@@ -51,7 +51,7 @@ export default function Products() {
       
       // const headers = token ? { Authorization: `Bearer ${token}` } : {}
       
-      const response = await axios.get('http://172.20.10.3:5000/api/users/products',)
+      const response = await axios.get('https://raijae-backend.onrender.com/api/users/products',)
       
       // Map the API response to match your component's expected structure
       const mappedProducts = response.data.products.map(product => ({
