@@ -93,12 +93,21 @@ export default function ProductDetail() {
     }
   }, [id])
 
+  // ✅ FIXED: Add selected color to cart item
   const handleAddToCart = () => {
-    if (!product) return
-    for (let i = 0; i < qty; i++) addToCart(product)
-    setAddedAnim(true)
-    setTimeout(() => setAddedAnim(false), 1600)
-    toast.success(`Added ${qty} item(s) to cart!`)
+    if (!product) return;
+    
+    // Create a copy of the product with the selected color
+    const productWithColor = {
+      ...product,
+      selectedColor: selColor,  // Store selected color
+      color: selColor           // Also store as 'color' for compatibility
+    };
+    
+    for (let i = 0; i < qty; i++) addToCart(productWithColor);
+    setAddedAnim(true);
+    setTimeout(() => setAddedAnim(false), 1600);
+    
   }
 
   const prevImg = () => setImgIdx(i => (i === 0 ? product.images.length - 1 : i - 1))
@@ -333,7 +342,6 @@ export default function ProductDetail() {
       `}</style>
 
       <div className="pd">
-        {/* NAVBAR */}
         <nav className="pd-nav">
           <Link to="/products" className="pd-nav-brand">RAIJAM</Link>
           <div className="pd-nav-right">
@@ -353,7 +361,6 @@ export default function ProductDetail() {
           </div>
         </nav>
 
-        {/* BREADCRUMB */}
         <div className="pd-crumb">
           <Link to="/products">Collection</Link>
           <span className="pd-crumb-sep">/</span>
@@ -362,9 +369,7 @@ export default function ProductDetail() {
           <span style={{ color: '#111', fontWeight: 500 }}>{product.name}</span>
         </div>
 
-        {/* MAIN CONTENT */}
         <div className="pd-main">
-          {/* IMAGES SECTION */}
           <div className="pd-images">
             <div className="pd-main-img-wrap">
               <img
@@ -395,7 +400,6 @@ export default function ProductDetail() {
             )}
           </div>
 
-          {/* INFO SECTION */}
           <div className="pd-info">
             <div className="pd-info-top">
               {product.brand?.trim() && <p className="pd-brand">{product.brand.trim()}</p>}
@@ -411,7 +415,6 @@ export default function ProductDetail() {
 
             <p className="pd-desc">{product.description || 'No description available.'}</p>
 
-            {/* COLORS */}
             {product.colors?.length > 0 && (
               <div>
                 <p className="pd-section-label">
@@ -431,7 +434,6 @@ export default function ProductDetail() {
               </div>
             )}
 
-            {/* QUANTITY */}
             <div>
               <p className="pd-section-label">Quantity</p>
               <div className="pd-qty-row">
@@ -445,7 +447,6 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            {/* BUTTONS */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <button
                 className={`pd-add-btn ${addedAnim ? 'added' : ''}`}
@@ -468,7 +469,6 @@ export default function ProductDetail() {
               )}
             </div>
 
-            {/* PERKS */}
             <div className="pd-perks">
               <div className="pd-perk"><Package size={14} /><span>Free delivery on orders over GHC 200</span></div>
               <div className="pd-perk"><RefreshCw size={14} /><span>30-day hassle-free returns</span></div>
@@ -477,7 +477,6 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        {/* RELATED PRODUCTS */}
         {related.length > 0 && (
           <div className="pd-related">
             <div style={{ height: 1, background: '#e4e4e4', marginBottom: 40 }} />

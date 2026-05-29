@@ -1,4 +1,3 @@
-// src/components/CartSlide.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, X, Plus, Minus, Trash2, MapPin, ChevronRight, Check } from 'lucide-react';
@@ -20,6 +19,7 @@ const CartSlide = () => {
     updateQuantity,
     getCartItemsCount,
     getCartTotal,
+    clearCart
   } = useCart();
 
   const [profile, setProfile] = useState(null);
@@ -110,17 +110,21 @@ const CartSlide = () => {
     }
   }, [cartOpen]);
 
-  // Prepare order data
+  // ✅ FIXED: Prepare order data with color from cart item
   const prepareOrderData = (paymentMethod) => {
+    console.log('Cart items in prepareOrderData:', cart.items);
+    
     const orderItems = cart.items.map(item => ({
       product_id: item.id,
       product_name: item.name,
       quantity: item.quantity,
       price: item.price,
       subtotal: item.price * item.quantity,
-      color: null,
+      color: item.selectedColor || item.color || null,  // Get color from cart item
       image: item.images?.[0] || null
     }));
+
+    console.log('Order items with colors:', orderItems);
 
     const totalAmount = getCartTotal();
 
@@ -202,13 +206,14 @@ const CartSlide = () => {
       );
       
       if (response.data.success) {
-        toast.success('Order placed successfully!');
-        toast.success('You will pay upon delivery. Thank you for your order!');
+        toast.success('Order placed successfully, You will pay upon delivery. Thank you for your order');
         
         setTimeout(() => {
           setCartOpen(false);
           navigate('/products');
         }, 2000);
+
+        clearCart();
       } else {
         toast.error(response.data.error || 'Failed to place order');
       }
@@ -276,17 +281,16 @@ const CartSlide = () => {
       if (response.data.success) {
         toast.success('Order created! Redirecting to Paystack...');
         
-        // If your backend returns a payment URL, redirect there
         if (response.data.payment_url) {
           window.location.href = response.data.payment_url;
         } else {
-          // Placeholder for Paystack integration
           toast.info('Paystack integration coming soon!');
           setTimeout(() => {
             setCartOpen(false);
             navigate('/products');
           }, 2000);
         }
+        clearCart();
       } else {
         toast.error(response.data.error || 'Failed to process payment');
       }
@@ -432,7 +436,11 @@ const CartSlide = () => {
                           <img src={item.images?.[0] || item.image || 'https://via.placeholder.com/60'} alt={item.name} />
                         </div>
                         <div className="cp-item-info">
-                          <p className="cp-item-name">{item.name}</p>
+                          <p className="cp-item-name">
+                            {item.name}
+                            {item.selectedColor && <span className="text-gray-400 text-xs ml-1">({item.selectedColor})</span>}
+                            {item.color && !item.selectedColor && <span className="text-gray-400 text-xs ml-1">({item.color})</span>}
+                          </p>
                           <p className="cp-item-price">GHC {((item.price ?? item.product_price) * item.quantity).toFixed(2)}</p>
                           <div className="cp-item-qty">
                             <button className="cp-qty-btn" onClick={() => updateQuantity(item.id, item.quantity - 1)}>
