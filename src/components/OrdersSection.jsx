@@ -64,7 +64,7 @@ const OrdersSection = () => {
           }
         );
         
-        console.log("Fetched orders:", response.data);
+       
 
         if (response.data.orders && Array.isArray(response.data.orders)) {
           setOrders(response.data.orders);
@@ -288,8 +288,8 @@ const OrdersSection = () => {
                         <span className="text-sm text-gray-900">{formatCurrency(order.order_total)}</span>
                       </div>
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-gray-500">Shipping</span>
-                        <span className="text-sm text-gray-500">Free</span>
+                        <span className="text-sm text-gray-500">Delivery</span>
+                        <span className="text-sm text-gray-500">within 48 hours</span>
                       </div>
                       <div className="pt-3 mt-2 border-t border-gray-100">
                         <div className="flex justify-between items-center">

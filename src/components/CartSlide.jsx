@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabaseClient';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import { PaystackButton } from 'react-paystack';
 
 const API_BASE_URL = 'https://raijae-backend.onrender.com/api/users';
 
@@ -30,6 +31,10 @@ const CartSlide = () => {
   const [userDataLoading, setUserDataLoading] = useState(true);
 
   const cartCount = getCartItemsCount();
+  const totalAmount = getCartTotal();
+
+  // Paystack public key (test key)
+  const paystackPublicKey = 'pk_test_3bdc97b024233bb522a068bfefbbe9292322b0fa';
 
   // Fetch user profile
   const fetchProfile = async () => {
@@ -110,23 +115,17 @@ const CartSlide = () => {
     }
   }, [cartOpen]);
 
-  // ✅ FIXED: Prepare order data with color from cart item
+  // Prepare order data
   const prepareOrderData = (paymentMethod) => {
-    console.log('Cart items in prepareOrderData:', cart.items);
-    
     const orderItems = cart.items.map(item => ({
       product_id: item.id,
       product_name: item.name,
       quantity: item.quantity,
       price: item.price,
       subtotal: item.price * item.quantity,
-      color: item.selectedColor || item.color || null,  // Get color from cart item
+      color: item.selectedColor || item.color || null,
       image: item.images?.[0] || null
     }));
-
-    console.log('Order items with colors:', orderItems);
-
-    const totalAmount = getCartTotal();
 
     return {
       customer: {
@@ -146,157 +145,136 @@ const CartSlide = () => {
       },
       payment: {
         method: paymentMethod,
-        status: paymentMethod === 'cash_on_delivery' ? 'pending' : 'awaiting_payment'
+        status: paymentMethod === 'cash_on_delivery' ? 'pending' : 'paid'
       },
       created_at: new Date().toISOString()
     };
+  };
+
+  // Submit order to backend (works for both payment methods)
+  const submitOrderToBackend = async (paymentMethod, orderData) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Please log in to place order');
+        navigate('/login');
+        return false;
+      }
+
+      const response = await axios.post(
+        `${API_BASE_URL}/create-order`,
+        orderData,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (response.data.success) {
+        if (paymentMethod === 'cash_on_delivery') {
+          toast.success('Order placed successfully! You will pay upon delivery. Thank you for your order!');
+        } else {
+          toast.success('Payment successful! Order placed successfully!');
+        }
+        
+        clearCart();
+        setCartOpen(false);
+        
+        setTimeout(() => {
+          navigate('/products');
+        }, 2000);
+        
+        return true;
+      } else {
+        toast.error(response.data.error || 'Failed to place order');
+        return false;
+      }
+    } catch (error) {
+      console.error('Order submission failed:', error);
+      toast.error(error.response?.data?.error || 'Failed to place order. Please try again.');
+      return false;
+    }
+  };
+
+  // Validate before order
+  const validateBeforeOrder = () => {
+    if (userDataLoading) {
+      toast.info('Please wait, loading your information...');
+      return false;
+    }
+
+    if (!selectedAddress) {
+      toast.warning('Please select a delivery address');
+      setShowAddressModal(true);
+      return false;
+    }
+
+    if (!profile) {
+      toast.warning('Please complete your profile before placing an order');
+      setCartOpen(false);
+      navigate('/account');
+      return false;
+    }
+
+    if (cart.items.length === 0) {
+      toast.warning('Your cart is empty');
+      return false;
+    }
+
+    if (!profile?.email) {
+      toast.warning('Please update your profile with an email address');
+      navigate('/account');
+      return false;
+    }
+
+    return true;
+  };
+
+  // =========================
+  // HANDLE PAYSTACK PAYMENT
+  // =========================
+  // This function is called AFTER Paystack payment is successful
+  const handlePaystackSuccess = async (reference) => {
+  
+    
+    // Prepare and submit order after successful payment
+    const orderData = prepareOrderData('paystack');
+    await submitOrderToBackend('paystack', orderData);
+  };
+
+  const handlePaystackClose = () => {
+   
+    toast.info('Payment was cancelled');
+  };
+
+  // Paystack button configuration
+  const paystackConfig = {
+    email: profile?.email || '',
+    amount: Math.round(totalAmount * 100),
+    publicKey: paystackPublicKey,
+    currency: 'GHS',
+    text: 'Pay with Paystack',
+    onSuccess: handlePaystackSuccess,
+    onClose: handlePaystackClose,
   };
 
   // =========================
   // HANDLE CASH ON DELIVERY
   // =========================
   const handleCashOnDelivery = async () => {
-    console.log('=== CASH ON DELIVERY SELECTED ===');
-    
-    if (userDataLoading) {
-      toast.info('Please wait, loading your information...');
-      return;
-    }
-
-    if (!selectedAddress) {
-      toast.warning('Please select a delivery address');
-      setShowAddressModal(true);
-      return;
-    }
-
-    if (!profile) {
-      toast.warning('Please complete your profile before placing an order');
-      setCartOpen(false);
-      navigate('/account');
-      return;
-    }
-
-    if (cart.items.length === 0) {
-      toast.warning('Your cart is empty');
-      return;
-    }
+    if (!validateBeforeOrder()) return;
 
     setIsPlacingOrder(true);
     const orderData = prepareOrderData('cash_on_delivery');
     
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        toast.error('Please log in to place order');
-        navigate('/login');
-        setIsPlacingOrder(false);
-        return;
-      }
-
-      const response = await axios.post(
-        `${API_BASE_URL}/create-order`,
-        orderData,
-        {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      
-      if (response.data.success) {
-        toast.success('Order placed successfully, You will pay upon delivery. Thank you for your order');
-        
-        setTimeout(() => {
-          setCartOpen(false);
-          navigate('/products');
-        }, 2000);
-
-        clearCart();
-      } else {
-        toast.error(response.data.error || 'Failed to place order');
-      }
+      await submitOrderToBackend('cash_on_delivery', orderData);
     } catch (error) {
       console.error('Order submission failed:', error);
-      toast.error(error.response?.data?.error || 'Failed to place order. Please try again.');
-    } finally {
-      setIsPlacingOrder(false);
-    }
-  };
-
-  // =========================
-  // HANDLE PAYSTACK PAYMENT
-  // =========================
-  const handlePaystackPayment = async () => {
-    console.log('=== PAYSTACK PAYMENT SELECTED ===');
-    
-    if (userDataLoading) {
-      toast.info('Please wait, loading your information...');
-      return;
-    }
-
-    if (!selectedAddress) {
-      toast.warning('Please select a delivery address');
-      setShowAddressModal(true);
-      return;
-    }
-
-    if (!profile) {
-      toast.warning('Please complete your profile before placing an order');
-      setCartOpen(false);
-      navigate('/account');
-      return;
-    }
-
-    if (cart.items.length === 0) {
-      toast.warning('Your cart is empty');
-      return;
-    }
-
-    setIsPlacingOrder(true);
-    const orderData = prepareOrderData('paystack');
-    
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        toast.error('Please log in to place order');
-        navigate('/login');
-        setIsPlacingOrder(false);
-        return;
-      }
-
-      const response = await axios.post(
-        `${API_BASE_URL}/create-order`,
-        orderData,
-        {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      
-      if (response.data.success) {
-        toast.success('Order created! Redirecting to Paystack...');
-        
-        if (response.data.payment_url) {
-          window.location.href = response.data.payment_url;
-        } else {
-          toast.info('Paystack integration coming soon!');
-          setTimeout(() => {
-            setCartOpen(false);
-            navigate('/products');
-          }, 2000);
-        }
-        clearCart();
-      } else {
-        toast.error(response.data.error || 'Failed to process payment');
-      }
-    } catch (error) {
-      console.error('Paystack payment failed:', error);
-      toast.error(error.response?.data?.error || 'Failed to process payment. Please try again.');
+      toast.error('Failed to place order. Please try again.');
     } finally {
       setIsPlacingOrder(false);
     }
@@ -462,29 +440,31 @@ const CartSlide = () => {
                   <div className="cp-foot">
                     <div className="cp-total-row">
                       <span className="cp-total-lbl">Total</span>
-                      <span className="cp-total-val">GHC {getCartTotal().toFixed(2)}</span>
+                      <span className="cp-total-val">GHC {totalAmount.toFixed(2)}</span>
                     </div>
                     <p className="cp-pay-label">Pay with</p>
                     <div className="cp-pay-options">
-                      <button 
-                        className="cp-pay-btn cp-paystack"
-                        onClick={handlePaystackPayment}
-                        disabled={isPlacingOrder || userDataLoading}
-                      >
-                        <span className="cp-paystack-logo">Pay</span>
-                        {userDataLoading ? 'Loading...' : (isPlacingOrder ? 'Processing...' : 'Pay with Paystack')}
-                      </button>
+                      {/* Paystack Button */}
+                      {profile?.email && totalAmount > 0 && (
+                        <PaystackButton
+                          {...paystackConfig}
+                          className="cp-pay-btn cp-paystack w-full"
+                          disabled={userDataLoading || !selectedAddress}
+                        />
+                      )}
+                      
                       <div className="cp-pay-divider">
                         <div className="cp-pay-divider-line" />
                         <span className="cp-pay-divider-txt">OR</span>
                         <div className="cp-pay-divider-line" />
                       </div>
+                      
                       <button 
                         className="cp-pay-btn cp-cod"
                         onClick={handleCashOnDelivery}
                         disabled={isPlacingOrder || userDataLoading}
                       >
-                        🏠 {userDataLoading ? 'Loading...' : (isPlacingOrder ? 'Processing...' : 'Cash on Delivery')}
+                        🏠 {isPlacingOrder ? 'Processing...' : 'Cash on Delivery'}
                       </button>
                     </div>
                   </div>
