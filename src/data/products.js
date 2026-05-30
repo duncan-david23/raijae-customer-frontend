@@ -28,6 +28,8 @@ export const feature_products = [
     price: 24.99,
     image: utensils,
   },
+
+
 ]
 
 
@@ -136,3 +138,31 @@ export const products = [
   },
  
 ];
+
+
+
+// about us images
+
+export const about_images = [
+  {
+    id: 1,
+    image: "https://res.cloudinary.com/dnujc0xye/image/upload/q_auto/f_auto/v1780135899/WhatsApp_Image_2026-05-30_at_10.10.31_vvtgqo.jpg"
+  },
+  {
+    id: 2,
+    image: "https://res.cloudinary.com/dnujc0xye/image/upload/q_auto/f_auto/v1780135415/WhatsApp_Image_2026-05-30_at_10.01.55_q0p5x5.jpg"
+  },
+  {
+    id: 3,
+    image: "https://res.cloudinary.com/dnujc0xye/image/upload/q_auto/f_auto/v1780135410/WhatsApp_Image_2026-05-30_at_10.01.55_1_u931zh.jpg"
+  },
+  {
+    id: 4,
+    image: "https://res.cloudinary.com/dnujc0xye/image/upload/q_auto/f_auto/v1780135899/WhatsApp_Image_2026-05-30_at_10.10.32_1_grktxh.jpg"
+  },
+  {
+    id: 5,
+    image: "https://res.cloudinary.com/dnujc0xye/image/upload/q_auto/f_auto/v1780135902/WhatsApp_Image_2026-05-30_at_10.10.33_ivrce3.jpg"
+  },
+ 
+]

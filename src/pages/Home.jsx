@@ -4,10 +4,13 @@ import { useNavigate } from 'react-router-dom'
 import {
   ChevronDown, ChevronLeft, ChevronRight, Menu, X,
 } from 'lucide-react'
-import { feature_products } from '../data/products'
+import { feature_products, about_images } from '../data/products'
 // Better social icons from react-icons (not lucide-react)
-import { FaInstagram, FaTwitter, FaFacebookF, FaLinkedinIn } from 'react-icons/fa'
+import { FaInstagram,FaFacebookF,} from 'react-icons/fa'
 import raijamLogo from '../assets/raijam_logo.png'
+import { RiTwitterXFill } from "react-icons/ri";
+import { SiTiktok } from "react-icons/si";
+
 
 /* ─── responsive hook ─── */
 const useIsMobile = () => {
@@ -38,10 +41,11 @@ const slideVariants = {
 }
 
 const SOCIALS = [
-  { Icon: FaInstagram, label: 'IG' },
-  { Icon: FaTwitter,   label: 'TW' },
-  { Icon: FaFacebookF,  label: 'FB' },
-  { Icon: FaLinkedinIn,  label: 'IN' },
+  { Icon: FaInstagram, label: 'IG', link: 'https://www.instagram.com/raijam_home_must_haves?igsh=a3hvenF2bWNndWp3' },
+  // { Icon: RiTwitterXFill,   label: 'X', link: 'https://twitter.com/' },
+  { Icon: FaFacebookF,  label: 'FB', link: 'https://www.facebook.com/share/1NhjeWzQJ2/' },
+  { Icon: SiTiktok,     label: 'TT', link: 'https://www.tiktok.com/@raijam_home_must_haves' },
+
 ]
 
 export default function Home() {
@@ -49,6 +53,8 @@ export default function Home() {
   const [menuOpen, setMenuOpen]       = useState(false)
   const [currentSlide, setCurrentSlide] = useState(0)
   const [direction, setDirection]     = useState(1)
+  // State for about carousel
+  const [aboutSlideIndex, setAboutSlideIndex] = useState(0)
 
   const prevSlide = () => {
     setDirection(-1)
@@ -60,6 +66,14 @@ export default function Home() {
   }
   const getProduct = (offset) =>
     feature_products[(currentSlide + offset + feature_products.length) % feature_products.length]
+
+  // About carousel controls
+  const prevAboutSlide = () => {
+    setAboutSlideIndex((prev) => (prev === 0 ? about_images.length - 1 : prev - 1))
+  }
+  const nextAboutSlide = () => {
+    setAboutSlideIndex((prev) => (prev === about_images.length - 1 ? 0 : prev + 1))
+  }
 
   /* ── inline responsive helpers ── */
   const px = isMobile ? '20px' : '48px'
@@ -104,6 +118,105 @@ const navigate = useNavigate()
           .gallery-item {
             flex: 0 0 calc(100% - 8px);
             min-width: calc(100% - 8px);
+          }
+        }
+
+        /* About carousel styles */
+        .about-carousel-container {
+          max-width: 860px;
+          margin: 0 auto;
+          position: relative;
+        }
+        .about-carousel-track {
+          display: flex;
+          gap: 20px;
+          justify-content: center;
+          align-items: center;
+        }
+        .about-carousel-image {
+          flex: 1;
+          border-radius: 6px;
+          overflow: hidden;
+          aspect-ratio: 4/3;
+          background: #ccc;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+          cursor: pointer;
+          transition: transform 0.3s ease;
+        }
+        .about-carousel-image:hover {
+          transform: scale(1.02);
+        }
+        .about-carousel-image img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          filter: grayscale(10%);
+          display: block;
+        }
+        .about-carousel-nav {
+          display: flex;
+          justify-content: center;
+          gap: 12px;
+          margin-top: 20px;
+        }
+        .about-carousel-nav button {
+          background: transparent;
+          border: 1px solid rgba(0,0,0,0.18);
+          border-radius: 20px;
+          padding: 6px 16px;
+          font-size: 11px;
+          font-weight: 700;
+          cursor: pointer;
+          color: #333;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+        }
+        .about-carousel-nav button:hover {
+          background: #111;
+          color: #fff;
+          border-color: #111;
+        }
+        .about-dots {
+          display: flex;
+          justify-content: center;
+          gap: 8px;
+          margin-top: 16px;
+        }
+        .about-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #bbb;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .about-dot.active {
+          background: #333;
+          width: 18px;
+          border-radius: 3px;
+        }
+
+        /* Desktop: show 3 images */
+        @media (min-width: 641px) {
+          .about-carousel-track {
+            gap: 24px;
+          }
+          .about-carousel-image {
+            flex: 0 0 calc(33.333% - 16px);
+            max-width: calc(33.333% - 16px);
+          }
+        }
+        /* Mobile: show 2 images */
+        @media (max-width: 640px) {
+          .about-carousel-track {
+            gap: 16px;
+            padding: 0 10px;
+          }
+          .about-carousel-image {
+            flex: 0 0 calc(50% - 8px);
+            max-width: calc(50% - 8px);
           }
         }
 
@@ -411,7 +524,9 @@ const navigate = useNavigate()
               {SOCIALS.map(({ Icon }, i) => (
                 <motion.a
                   key={i}
-                  href="#"
+                  href={SOCIALS[i].link}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={s.socialLink}
                   whileHover={{ scale: 1.3, color: '#000' }}
                   transition={{ duration: 0.18 }}
@@ -459,20 +574,61 @@ const navigate = useNavigate()
               </motion.p>
             </motion.div>
 
-            {/* Gallery - Horizontal scrollable with hidden scrollbar, 2 images per row on desktop */}
-            <motion.div variants={stagger} className="gallery-scroll">
-              {feature_products.slice(0, 6).map((product, i) => (
-                <motion.div
-                  key={i}
-                  variants={fadeUp}
-                  whileHover={{ scale: 1.03, boxShadow: '0 16px 40px rgba(0,0,0,0.14)' }}
-                  transition={{ duration: 0.28 }}
-                  className="gallery-item"
-                  style={s.galleryItem}
+            {/* About Carousel - Shows 3 images on desktop, 2 on mobile */}
+            <motion.div 
+              variants={fadeUp}
+              className="about-carousel-container"
+            >
+              <div className="about-carousel-track">
+                {about_images.slice(aboutSlideIndex, aboutSlideIndex + (isMobile ? 2 : 3)).map((product, idx) => (
+                  <motion.div
+                    key={idx}
+                    className="about-carousel-image"
+                    whileHover={{ scale: 1.03, boxShadow: '0 16px 40px rgba(0,0,0,0.14)' }}
+                    transition={{ duration: 0.28 }}
+                  >
+                    <img src={product.image} alt={product.name} />
+                  </motion.div>
+                ))}
+                {/* Handle wrap-around for last slides */}
+                {(aboutSlideIndex + (isMobile ? 2 : 3)) > about_images.length && 
+                  about_images.slice(0, (aboutSlideIndex + (isMobile ? 2 : 3)) - about_images.length).map((product, idx) => (
+                    <motion.div
+                      key={`wrap-${idx}`}
+                      className="about-carousel-image"
+                      whileHover={{ scale: 1.03, boxShadow: '0 16px 40px rgba(0,0,0,0.14)' }}
+                      transition={{ duration: 0.28 }}
+                    >
+                      <img src={product.image} alt={product.name} />
+                    </motion.div>
+                  ))
+                }
+              </div>
+              <div className="about-carousel-nav">
+                <motion.button
+                  onClick={prevAboutSlide}
+                  whileHover={{ background: '#111', color: '#fff', borderColor: '#111' }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <img src={product.image} alt={product.name} style={s.galleryImg} />
-                </motion.div>
-              ))}
+                  <ChevronLeft size={14} /> PREV
+                </motion.button>
+                <motion.button
+                  onClick={nextAboutSlide}
+                  whileHover={{ background: '#111', color: '#fff', borderColor: '#111' }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  NEXT <ChevronRight size={14} />
+                </motion.button>
+              </div>
+              <div className="about-dots">
+                {Array.from({ length: Math.ceil(about_images.length / (isMobile ? 2 : 3)) }).map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={`about-dot ${Math.floor(aboutSlideIndex / (isMobile ? 2 : 3)) === idx ? 'active' : ''}`}
+                    onClick={() => setAboutSlideIndex(idx * (isMobile ? 2 : 3))}
+                  />
+                ))}
+              </div>
             </motion.div>
           </motion.div>
         </section>
@@ -603,7 +759,9 @@ const navigate = useNavigate()
             {SOCIALS.map(({ Icon, label }) => (
               <motion.a
                 key={label}
-                href="#"
+                href={SOCIALS.find((s) => s.label === label)?.link || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
                 style={s.footerSocial}
                 whileHover={{ scale: 1.2, color: '#000' }}
                 transition={{ duration: 0.18 }}

@@ -5,12 +5,73 @@ import { Mail, Phone, MessageCircle, ChevronDown, ChevronUp, Headphones, FileTex
 const HelpSection = () => {
   const [openFaq, setOpenFaq] = useState(null);
 
-  const faqs = [
-    { q: 'How do I track my order?', a: 'You can track your order from the Orders section in your account. Click on any order to view its current status and tracking information.' },
-    { q: 'What is your return policy?', a: 'We offer a 30-day return policy for unused items in original packaging. Contact our support team to initiate a return.' },
-    { q: 'How long does shipping take?', a: 'Standard shipping takes 3-5 business days. Express shipping is available for 1-2 business days.' },
-    { q: 'Do you ship internationally?', a: 'Yes, we ship to select countries. Shipping costs and delivery times vary by location.' },
-  ];
+ const faqs = [
+  {
+    q: 'What products do you sell?',
+    a: 'We offer a curated selection of luxury home items, premium home décor, lifestyle accessories, kitchen essentials, and high-quality ice chests designed for both indoor and outdoor use.'
+  },
+  {
+    q: 'How do I place an order?',
+    a: 'Browse our products, add your desired items to the cart, and proceed to checkout. Follow the payment steps to complete your purchase.'
+  },
+  {
+    q: 'How can I track my order?',
+    a: 'You can track your order directly from the Orders page in your account. Order statuses are updated in real-time so you can monitor your delivery progress.'
+  },
+  {
+    q: 'What payment methods do you accept?',
+    a: 'We accept secure online payments, including cards, mobile money, and other available payment methods displayed during checkout.'
+  },
+  {
+    q: 'Do you offer Cash on Delivery (COD)?',
+    a: 'Yes, Cash on Delivery is available for eligible locations. If COD is available for your area, you will see it as a payment option during checkout.'
+  },
+  {
+    q: 'How long does shipping take?',
+    a: 'Delivery times vary depending on your location. Most orders are processed within 1–3 business days and delivered shortly after dispatch.'
+  },
+  {
+    q: 'Do you deliver nationwide?',
+    a: 'Yes, we deliver to most locations nationwide. Delivery availability and shipping fees are calculated during checkout.'
+  },
+  {
+    q: 'What is your return policy?',
+    a: 'We accept returns for eligible products that are unused and in their original condition. Please contact our support team to initiate a return request.'
+  },
+  {
+    q: 'What should I do if I receive a damaged item?',
+    a: 'If your order arrives damaged or defective, contact our support team as soon as possible with photos of the item so we can assist with a replacement or resolution.'
+  },
+  {
+    q: 'Can I cancel my order?',
+    a: 'Orders can be canceled before they are processed for shipment. Once an order has been dispatched, cancellation may no longer be possible.'
+  },
+  {
+    q: 'Are your products authentic and high quality?',
+    a: 'Yes. We carefully source all products from trusted suppliers to ensure excellent quality, durability, and customer satisfaction.'
+  },
+  {
+    q: 'How long do your ice chests keep items cold?',
+    a: 'Performance varies by model and usage conditions, but our premium ice chests are designed to provide long-lasting insulation for outdoor activities and travel.'
+  },
+  {
+    q: 'Do you offer discounts and promotions?',
+    a: 'Yes. We regularly run special promotions, seasonal sales, and exclusive offers. Check the app frequently for the latest deals.'
+  },
+  {
+    q: 'How can I contact customer support?',
+    a: 'You can reach our support team through email, phone, or WhatsApp for assistance with orders and inquiries.'
+  }
+];
+
+
+
+const handleWhatsappChat = () => {
+  const phoneNumber = '+233558822969'; // Replace with your support phone number
+  const message = encodeURIComponent('Hello, I need assistance with my order.'); // Pre-filled message
+  const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+  window.open(whatsappUrl, '_blank');
+}
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
@@ -26,7 +87,7 @@ const HelpSection = () => {
             <Mail className="w-6 h-6 text-white" />
           </div>
           <h3 className="font-medium text-gray-900 mb-1">Email Support</h3>
-          <p className="text-sm text-gray-500 mb-2">support@luxe.com</p>
+          <p className="text-sm text-gray-500 mb-2">andaratu81@gmail.com</p>
           <p className="text-xs text-gray-400">Response within 24 hours</p>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-5 text-center">
@@ -34,7 +95,7 @@ const HelpSection = () => {
             <Phone className="w-6 h-6 text-white" />
           </div>
           <h3 className="font-medium text-gray-900 mb-1">Phone Support</h3>
-          <p className="text-sm text-gray-500 mb-2">+1 (555) 123-4567</p>
+          <p className="text-sm text-gray-500 mb-2">+233 (558) 82 2969</p>
           <p className="text-xs text-gray-400">Mon-Fri, 9AM - 6PM EST</p>
         </div>
       </div>
@@ -51,7 +112,7 @@ const HelpSection = () => {
               <p className="text-sm text-gray-500">Chat with our support team instantly</p>
             </div>
           </div>
-          <button className="px-5 py-2 bg-black text-white rounded-md hover:bg-gray-800 text-sm">
+          <button onClick={handleWhatsappChat} className="px-5 py-2 bg-black text-white rounded-md hover:bg-gray-800 text-sm">
             Start Chat
           </button>
         </div>
@@ -84,7 +145,7 @@ const HelpSection = () => {
       </div>
 
       {/* Resources */}
-      <div className="grid md:grid-cols-2 gap-4 mt-8">
+      {/* <div className="grid md:grid-cols-2 gap-4 mt-8">
         <div className="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-3">
           <FileText className="w-5 h-5 text-gray-400" />
           <div>
@@ -99,7 +160,7 @@ const HelpSection = () => {
             <p className="text-xs text-gray-500">Delivery times and costs</p>
           </div>
         </div>
-      </div>
+      </div> */}
     </motion.div>
   );
 };
