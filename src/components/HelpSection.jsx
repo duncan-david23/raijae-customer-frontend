@@ -73,6 +73,17 @@ const handleWhatsappChat = () => {
   window.open(whatsappUrl, '_blank');
 }
 
+
+const handleEmailSupport = () => {
+  const email = 'andaratu81@gmail.com';
+  window.open(`mailto:${email}`, '_blank');
+}
+
+const handleCall = () => {
+  const phoneNumber = '+233558822969';
+  window.open(`tel:${phoneNumber}`, '_blank');
+}
+
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
       <div className="mb-6">
@@ -83,7 +94,7 @@ const handleWhatsappChat = () => {
       {/* Contact Options */}
       <div className="grid md:grid-cols-2 gap-4 mb-8">
         <div className="bg-white rounded-lg border border-gray-200 p-5 text-center">
-          <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center mx-auto mb-3">
+          <div onClick={handleEmailSupport} className="w-12 h-12 bg-black rounded-full flex items-center justify-center mx-auto mb-3">
             <Mail className="w-6 h-6 text-white" />
           </div>
           <h3 className="font-medium text-gray-900 mb-1">Email Support</h3>
@@ -91,7 +102,7 @@ const handleWhatsappChat = () => {
           <p className="text-xs text-gray-400">Response within 24 hours</p>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-5 text-center">
-          <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center mx-auto mb-3">
+          <div onClick={handleCall} className="w-12 h-12 bg-black rounded-full flex items-center justify-center mx-auto mb-3">
             <Phone className="w-6 h-6 text-white" />
           </div>
           <h3 className="font-medium text-gray-900 mb-1">Phone Support</h3>
