@@ -10,6 +10,8 @@ import AuthWrapper from './components/AuthWrapper'
 import CartSlide from './components/CartSlide'
 import { ToastContainer } from 'react-toastify'
 import { CartProvider } from './context/CartContext'
+import ResetPassword from './pages/ResetPassword'
+import ForgotPassword from './pages/ForgotPassword'
 
 const App = () => {
   return (
@@ -19,6 +21,8 @@ const App = () => {
         <Route path='/login' element={<Login />} />
         <Route path='/register' element={<Register />} />
         <Route path='/products' element={<Products />} />
+        <Route path='/reset-password' element={<ResetPassword />} />
+        <Route path='/forgot-password' element={<ForgotPassword />} />
         <Route path="/product/:id" element={
           <AuthWrapper>
             <ProductDetail />

@@ -238,8 +238,8 @@ const CartSlide = () => {
   // =========================
   // This function is called AFTER Paystack payment is successful
   const handlePaystackSuccess = async (reference) => {
-  
-    
+   
+
     // Prepare and submit order after successful payment
     const orderData = prepareOrderData('paystack');
     await submitOrderToBackend('paystack', orderData);
@@ -249,6 +249,8 @@ const CartSlide = () => {
    
     toast.info('Payment was cancelled');
   };
+
+ 
 
   // Paystack button configuration
   const paystackConfig = {
